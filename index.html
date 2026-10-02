@@ -26,7 +26,6 @@
             <input type="text" id="globalSearch" placeholder="Search Customer..." class="w-full px-3 py-1.5 sm:py-2 rounded text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm">
         </div>
         <div class="flex items-center gap-2">
-            <!-- Back to Dashboard Home Button -->
             <button onclick="showHome()" class="bg-blue-800 px-2 py-1.5 sm:px-3 sm:py-1 rounded hover:bg-blue-900 text-xs sm:text-sm whitespace-nowrap" title="Home / Dashboard"><i class="fas fa-home"></i></button>
         </div>
     </header>
@@ -52,9 +51,7 @@
                     <h2 class="text-xl font-bold text-blue-800"><i class="fas fa-bell mr-2 text-red-500"></i>This Month's Dues (इस महीने की पॉलिसी)</h2>
                     <p class="text-sm text-gray-600 mt-1">यहाँ पूरे ऐप के उन ग्राहकों की लिस्ट है जिनकी पॉलिसी इस महीने रिन्यू होनी है।</p>
                 </div>
-                <div class="p-2 sm:p-4" id="globalDuesList">
-                    <!-- Global Dues populated by JS -->
-                </div>
+                <div class="p-2 sm:p-4" id="globalDuesList"></div>
             </div>
 
             <!-- Ledger View -->
@@ -81,7 +78,6 @@
                         </div>
 
                         <div class="flex gap-1">
-                            <!-- Due List Button -->
                             <button onclick="openDuesSheet()" class="bg-yellow-500 text-white px-2 h-8 rounded hover:bg-yellow-600 flex items-center justify-center text-xs font-bold" title="Dues Sheet"><i class="fas fa-list-alt sm:mr-1"></i> <span class="hidden sm:inline">Sheet</span></button>
                             <button onclick="sendWhatsApp()" class="bg-green-500 text-white w-8 h-8 rounded hover:bg-green-600 flex items-center justify-center"><i class="fab fa-whatsapp"></i></button>
                             <button onclick="exportPDF()" class="bg-red-500 text-white px-2 h-8 rounded hover:bg-red-600 flex items-center justify-center text-xs font-bold"><i class="fas fa-file-pdf sm:mr-1"></i> <span class="hidden sm:inline">PDF</span></button>
@@ -91,7 +87,7 @@
 
                 <div class="p-2 sm:p-3 bg-gray-100 border-b flex gap-2">
                     <button onclick="openGiveModal()" class="flex-1 bg-red-100 text-red-700 font-bold py-2 rounded border border-red-300 hover:bg-red-200 shadow-sm text-sm sm:text-base">GIVE (-)</button>
-                    <button onclick="openModal('receiveModal')" class="flex-1 bg-green-100 text-green-700 font-bold py-2 rounded border border-green-300 hover:bg-green-200 shadow-sm text-sm sm:text-base">RECEIVE (+)</button>
+                    <button onclick="openReceiveModal()" class="flex-1 bg-green-100 text-green-700 font-bold py-2 rounded border border-green-300 hover:bg-green-200 shadow-sm text-sm sm:text-base">RECEIVE (+)</button>
                 </div>
                 
                 <div id="bulkActionBar" class="hidden bg-red-50 p-2 border-b border-red-200 flex justify-between items-center">
@@ -140,7 +136,7 @@
         </div>
     </div>
 
-    <!-- Add Customer (Added onkeypress for Enter Key) -->
+    <!-- Add Customer -->
     <div id="addCustomerModal" onkeypress="handleEnter(event, saveCustomer)" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50 p-2">
         <div class="bg-white p-5 rounded shadow-lg w-[95%] max-w-sm">
             <h3 class="text-lg font-bold mb-4">Add New Customer</h3>
@@ -153,13 +149,13 @@
         </div>
     </div>
 
-    <!-- Give Modal (Added onkeypress for Enter Key) -->
+    <!-- Give Modal -->
     <div id="giveModal" onkeypress="handleEnter(event, saveGive)" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50 p-2">
-        <div class="bg-white p-4 sm:p-6 rounded shadow-lg w-[95%] max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="bg-white p-4 sm:p-6 rounded shadow-lg w-[95%] max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-base sm:text-lg font-bold text-red-600">Give (Payment Out)</h3>
+                <h3 class="text-base sm:text-lg font-bold text-red-600">Give (Payment Out) <span class="text-xs text-gray-400 font-normal ml-2 italic" id="gDraftStatus">Draft Saved</span></h3>
                 <label class="flex items-center cursor-pointer bg-gray-100 px-2 sm:px-3 py-1 rounded border">
-                    <input type="checkbox" id="isPolicyToggle" class="mr-2 w-4 h-4" checked onchange="togglePolicyFields()">
+                    <input type="checkbox" id="isPolicyToggle" class="mr-2 w-4 h-4" checked onchange="togglePolicyFields(); triggerGiveDraftSave();">
                     <span class="text-xs sm:text-sm font-bold text-gray-700">Policy Details</span>
                 </label>
             </div>
@@ -193,17 +189,20 @@
                 </div>
             </div>
 
-            <div class="flex justify-end gap-2 border-t pt-3 sm:pt-4">
-                <button onclick="closeModal('giveModal')" class="px-4 py-2 text-gray-500">Cancel</button>
-                <button onclick="saveGive()" class="bg-red-600 text-white px-4 sm:px-6 py-2 rounded font-bold shadow w-full sm:w-auto">Save Entry</button>
+            <div class="flex justify-between items-center gap-2 border-t pt-3 sm:pt-4 mt-auto">
+                <button onclick="clearGiveFormAndDraft()" class="text-red-500 text-xs sm:text-sm font-bold hover:bg-red-50 px-2 py-1 rounded"><i class="fas fa-trash-alt mr-1"></i> Clear Draft</button>
+                <div class="flex gap-2">
+                    <button onclick="closeModal('giveModal')" class="px-3 sm:px-4 py-2 text-gray-500">Cancel</button>
+                    <button onclick="saveGive()" class="bg-red-600 text-white px-4 sm:px-6 py-2 rounded font-bold shadow w-full sm:w-auto">Save Entry</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Receive Modal (Added onkeypress for Enter Key) -->
+    <!-- Receive Modal -->
     <div id="receiveModal" onkeypress="handleEnter(event, saveReceive)" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50 p-2">
         <div class="bg-white p-5 rounded shadow-lg w-[95%] max-w-sm">
-            <h3 class="text-lg font-bold mb-4 text-green-600">Receive Payment</h3>
+            <h3 class="text-lg font-bold mb-4 text-green-600">Receive Payment <span class="text-xs text-gray-400 font-normal ml-2 italic" id="rDraftStatus">Draft Saved</span></h3>
             <input type="number" id="rAmount" placeholder="Amount (₹)" class="w-full border border-green-200 bg-green-50 p-2 mb-3 rounded text-xl font-bold">
             <label class="text-xs text-gray-500 block mb-1">Receive Date</label>
             <input type="date" id="rDate" class="w-full border p-2 mb-3 rounded w-full">
@@ -213,9 +212,13 @@
                 <option value="Other">Other Person</option>
             </select>
             <input type="text" id="rRemark" placeholder="Remark / Details" class="w-full border p-2 mb-4 rounded">
-            <div class="flex justify-end gap-2">
-                <button onclick="closeModal('receiveModal')" class="px-4 py-2 text-gray-500">Cancel</button>
-                <button onclick="saveReceive()" class="bg-green-600 text-white px-4 py-2 rounded font-bold shadow w-full sm:w-auto">Save Entry</button>
+            
+            <div class="flex justify-between items-center gap-2 pt-2 border-t mt-2">
+                <button onclick="clearReceiveFormAndDraft()" class="text-red-500 text-xs sm:text-sm font-bold hover:bg-red-50 px-2 py-1 rounded"><i class="fas fa-trash-alt mr-1"></i> Clear</button>
+                <div class="flex gap-2">
+                    <button onclick="closeModal('receiveModal')" class="px-3 py-2 text-gray-500">Cancel</button>
+                    <button onclick="saveReceive()" class="bg-green-600 text-white px-4 py-2 rounded font-bold shadow">Save</button>
+                </div>
             </div>
         </div>
     </div>
@@ -245,14 +248,82 @@
         // --- ENTER KEY LOGIC ---
         function handleEnter(e, saveAction) {
             if (e.key === 'Enter') {
-                e.preventDefault(); // Stop default form submit behavior
+                e.preventDefault(); 
                 saveAction();
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        // --- DRAFT / AUTO-SAVE LOGIC ---
+        const giveFormIds = ['gAmount', 'gDate', 'gRemark', 'gPolicyNo', 'gHolder', 'gDob', 'gMobile', 'gEmail', 'gPass', 'gFreq', 'gNextDue'];
+        const receiveFormIds = ['rAmount', 'rDate', 'rMode', 'rRemark'];
+
+        function triggerGiveDraftSave() {
+            let draft = { isPolicy: document.getElementById('isPolicyToggle').checked };
+            giveFormIds.forEach(id => draft[id] = document.getElementById(id).value);
+            localStorage.setItem('samDraftGive', JSON.stringify(draft));
+            document.getElementById('gDraftStatus').style.display = 'inline';
+        }
+
+        function triggerReceiveDraftSave() {
+            let draft = {};
+            receiveFormIds.forEach(id => draft[id] = document.getElementById(id).value);
+            localStorage.setItem('samDraftReceive', JSON.stringify(draft));
+            document.getElementById('rDraftStatus').style.display = 'inline';
+        }
+
+        document.getElementById('giveModal').addEventListener('input', triggerGiveDraftSave);
+        document.getElementById('giveModal').addEventListener('change', triggerGiveDraftSave);
+        document.getElementById('receiveModal').addEventListener('input', triggerReceiveDraftSave);
+        document.getElementById('receiveModal').addEventListener('change', triggerReceiveDraftSave);
+
+        function openGiveModal() {
+            document.getElementById('gDraftStatus').style.display = 'none';
+            let draft = JSON.parse(localStorage.getItem('samDraftGive'));
+            if(draft && Object.keys(draft).length > 1) { // If draft exists and has data
+                document.getElementById('isPolicyToggle').checked = draft.isPolicy;
+                giveFormIds.forEach(id => { if(draft[id]) document.getElementById(id).value = draft[id]; });
+                document.getElementById('gDraftStatus').style.display = 'inline';
+            } else {
+                clearGiveFormAndDraft(false); // Just clear fields, dont close
+                document.getElementById('gDate').valueAsDate = new Date();
+            }
+            openModal('giveModal');
+            togglePolicyFields(); 
+        }
+
+        function openReceiveModal() {
+            document.getElementById('rDraftStatus').style.display = 'none';
+            let draft = JSON.parse(localStorage.getItem('samDraftReceive'));
+            if(draft && Object.keys(draft).length > 0) {
+                receiveFormIds.forEach(id => { if(draft[id]) document.getElementById(id).value = draft[id]; });
+                document.getElementById('rDraftStatus').style.display = 'inline';
+            } else {
+                clearReceiveFormAndDraft(false);
+                document.getElementById('rDate').valueAsDate = new Date();
+            }
+            openModal('receiveModal');
+        }
+
+        function clearGiveFormAndDraft(close = true) {
+            giveFormIds.forEach(id => document.getElementById(id).value = '');
             document.getElementById('gDate').valueAsDate = new Date();
+            document.getElementById('isPolicyToggle').checked = true;
+            togglePolicyFields();
+            localStorage.removeItem('samDraftGive');
+            document.getElementById('gDraftStatus').style.display = 'none';
+            if(close) closeModal('giveModal');
+        }
+
+        function clearReceiveFormAndDraft(close = true) {
+            receiveFormIds.forEach(id => document.getElementById(id).value = '');
             document.getElementById('rDate').valueAsDate = new Date();
+            document.getElementById('rMode').value = 'Online';
+            localStorage.removeItem('samDraftReceive');
+            document.getElementById('rDraftStatus').style.display = 'none';
+            if(close) closeModal('receiveModal');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
             renderCustomers();
             showHome(); 
         });
@@ -260,11 +331,10 @@
         function openModal(id) { document.getElementById(id).classList.add('active'); }
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-        // --- FIXED DISPLAY LOGIC TO PREVENT UI OVERLAP ---
+        // --- FIXED DISPLAY LOGIC ---
         function showHome() {
             activeCustomerId = null;
             renderCustomers(); 
-            
             document.getElementById('mainContent').style.display = 'flex';
             
             if (window.innerWidth < 768) {
@@ -284,11 +354,9 @@
 
         function showLedgerUI() {
             document.getElementById('mainContent').style.display = 'flex';
-            
             if (window.innerWidth < 768) {
                 document.getElementById('sidebar').style.display = 'none';
             }
-            
             document.getElementById('dashboardView').style.display = 'none';
             document.getElementById('ledgerView').style.display = 'flex';
         }
@@ -306,10 +374,7 @@
                     let d = new Date(tx.nextDue);
                     if(d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
                         let cust = appData.customers.find(c => c.id === tx.customerId);
-                        upcomingDues.push({
-                            ...tx,
-                            customerName: cust ? cust.name : 'Unknown'
-                        });
+                        upcomingDues.push({ ...tx, customerName: cust ? cust.name : 'Unknown' });
                     }
                 }
             });
@@ -345,12 +410,10 @@
             if(!activeCustomerId) return;
             let cust = appData.customers.find(c => c.id === activeCustomerId);
             document.getElementById('duesCustName').innerText = cust.name;
-            
             let tbody = document.getElementById('duesTableBody');
             tbody.innerHTML = '';
             
             let custDues = appData.transactions.filter(t => t.customerId === activeCustomerId && t.type === 'GIVE' && t.isPolicy && t.nextDue);
-            
             custDues.sort((a,b) => new Date(a.nextDue) - new Date(b.nextDue));
             
             if(custDues.length === 0) {
@@ -375,9 +438,7 @@
             let element = document.getElementById('duesPdfArea');
             let title = document.getElementById('duesPdfTitle');
             let cust = appData.customers.find(c => c.id === activeCustomerId);
-            
             title.classList.remove('hidden'); 
-            
             let opt = {
                 margin:       0.5,
                 filename:     `Renewal_Sheet_${cust.name}.pdf`,
@@ -385,16 +446,7 @@
                 html2canvas:  { scale: 2 },
                 jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
             };
-
-            html2pdf().set(opt).from(element).save().then(() => {
-                title.classList.add('hidden'); 
-            });
-        }
-
-        function openGiveModal() {
-            document.getElementById('gDate').valueAsDate = new Date();
-            openModal('giveModal');
-            togglePolicyFields(); 
+            html2pdf().set(opt).from(element).save().then(() => { title.classList.add('hidden'); });
         }
 
         function togglePolicyFields() {
@@ -404,14 +456,6 @@
                 container.style.display = 'grid';
             } else {
                 container.style.display = 'none';
-                document.getElementById('gPolicyNo').value = '';
-                document.getElementById('gHolder').value = '';
-                document.getElementById('gDob').value = '';
-                document.getElementById('gMobile').value = '';
-                document.getElementById('gEmail').value = '';
-                document.getElementById('gPass').value = '';
-                document.getElementById('gFreq').value = '';
-                document.getElementById('gNextDue').value = '';
             }
         }
 
@@ -441,6 +485,7 @@
             else if(freq === 'Yearly') d.setFullYear(d.getFullYear() + 1);
             
             document.getElementById('gNextDue').valueAsDate = d;
+            triggerGiveDraftSave(); // update draft with auto-calculated date
         }
 
         function saveCustomer() {
@@ -475,7 +520,6 @@
             document.getElementById('ledgerDateFilter').value = ''; 
             selectedTransactions.clear(); 
             updateActionBar();
-            
             renderCustomers();
             
             let cust = appData.customers.find(c => c.id === id);
@@ -491,7 +535,6 @@
             if(!amt || !activeCustomerId) return;
             
             let isPolicy = document.getElementById('isPolicyToggle').checked;
-            
             let tx = {
                 id: genId(), customerId: activeCustomerId, type: 'GIVE', amount: amt,
                 date: document.getElementById('gDate').value,
@@ -513,8 +556,7 @@
 
             appData.transactions.push(tx);
             saveData();
-            closeModal('giveModal');
-            document.getElementById('gAmount').value = ''; 
+            clearGiveFormAndDraft(true); // Saves and wipes draft
             renderTransactions();
             renderDashboard(); 
         }
@@ -531,18 +573,13 @@
             };
             appData.transactions.push(tx);
             saveData();
-            closeModal('receiveModal');
-            document.getElementById('rAmount').value = ''; 
+            clearReceiveFormAndDraft(true); // Saves and wipes draft
             renderTransactions();
         }
 
         function toggleSelection(txId) {
             let checkbox = document.getElementById(`chk_${txId}`);
-            if(checkbox.checked) {
-                selectedTransactions.add(txId);
-            } else {
-                selectedTransactions.delete(txId);
-            }
+            if(checkbox.checked) { selectedTransactions.add(txId); } else { selectedTransactions.delete(txId); }
             updateActionBar();
         }
 
@@ -550,12 +587,10 @@
             const bar = document.getElementById('bulkActionBar');
             const countSpan = document.getElementById('selectedCount');
             if(selectedTransactions.size > 0) {
-                bar.classList.remove('hidden');
-                bar.classList.add('flex');
+                bar.classList.remove('hidden'); bar.classList.add('flex');
                 countSpan.innerText = selectedTransactions.size;
             } else {
-                bar.classList.add('hidden');
-                bar.classList.remove('flex');
+                bar.classList.add('hidden'); bar.classList.remove('flex');
             }
         }
 
@@ -573,7 +608,6 @@
         function openViewDetails(txId) {
             let tx = appData.transactions.find(t => t.id === txId);
             if(!tx) return;
-            
             let content = document.getElementById('viewDetailsContent');
             let dateStr = new Date(tx.date).toLocaleDateString('en-IN');
             
@@ -595,16 +629,14 @@
                             <div class="text-gray-500">Frequency:</div><div class="font-bold">${tx.freq || '-'}</div>
                             <div class="text-gray-500">Next Due Date:</div><div class="font-bold text-red-500">${dueStr}</div>
                             <div class="text-gray-500">Remark:</div><div class="font-bold break-words">${tx.remark || '-'}</div>
-                        </div>
-                    `;
+                        </div>`;
                 } else {
                     content.innerHTML = `
                         <div class="grid grid-cols-2 gap-y-3">
                             <div class="text-gray-500">Amount Paid (Debit):</div><div class="font-bold text-red-600">₹${tx.amount}</div>
                             <div class="text-gray-500">Date:</div><div class="font-bold">${dateStr}</div>
                             <div class="text-gray-500">Remark/Details:</div><div class="font-bold break-words">${tx.remark || '-'}</div>
-                        </div>
-                    `;
+                        </div>`;
                 }
             } else {
                 content.innerHTML = `
@@ -613,8 +645,7 @@
                         <div class="text-gray-500">Date:</div><div class="font-bold">${dateStr}</div>
                         <div class="text-gray-500">Payment Mode:</div><div class="font-bold">${tx.mode || 'Cash'}</div>
                         <div class="text-gray-500">Remark:</div><div class="font-bold break-words">${tx.remark || '-'}</div>
-                    </div>
-                `;
+                    </div>`;
             }
             openModal('viewDetailsModal');
         }
@@ -628,8 +659,7 @@
                 <div class="flex justify-between items-center p-2 sm:p-3 bg-gray-800 text-white font-bold text-xs sm:text-sm border-b rounded-t">
                     <div class="flex items-center gap-2"><i class="fas fa-list"></i> Transactions</div>
                     <div class="text-right mr-1">Amount & Balance</div>
-                </div>
-            `;
+                </div>`;
             
             let custTxs = appData.transactions.filter(t => t.customerId === activeCustomerId);
             custTxs.sort((a,b) => new Date(a.date) - new Date(b.date) || a.timestamp - b.timestamp);
@@ -642,7 +672,6 @@
             });
             
             if(dateFilter) { custTxs = custTxs.filter(tx => tx.date === dateFilter); }
-
             if(searchTerm) {
                 custTxs = custTxs.filter(tx => 
                     (tx.policyNo && tx.policyNo.toLowerCase().includes(searchTerm)) ||
@@ -660,7 +689,6 @@
 
             custTxs.forEach(tx => {
                 let detailsHTML = '';
-                
                 if(tx.type === 'GIVE') {
                     if(tx.isPolicy) {
                         detailsHTML = `
@@ -688,7 +716,6 @@
 
                 let row = document.createElement('div');
                 row.className = "flex justify-between items-start border-b p-2 sm:p-3 hover:bg-blue-50 transition-colors w-full";
-                
                 row.innerHTML = `
                     <div class="flex gap-2 items-start flex-1 overflow-hidden pr-2">
                         <input type="checkbox" id="chk_${tx.id}" class="w-4 h-4 mt-0.5 flex-shrink-0 cursor-pointer no-pdf text-blue-600 rounded" ${isChecked} onchange="toggleSelection('${tx.id}')">
@@ -697,7 +724,6 @@
                             <div class="leading-tight text-sm">${detailsHTML}</div>
                         </div>
                     </div>
-                    
                     <div class="flex flex-col items-end flex-shrink-0 min-w-[90px]">
                         <div class="font-bold text-sm ${tx.type === 'GIVE' ? 'text-red-600' : 'text-green-600'}">
                             ${tx.type === 'GIVE' ? '- ₹' + tx.amount : '+ ₹' + tx.amount}
@@ -710,18 +736,11 @@
             });
         }
 
-        // --- WHATSAPP LOGIC ---
         function sendWhatsApp() {
             let cust = appData.customers.find(c => c.id === activeCustomerId);
             if(!cust.phone) return alert("कस्टमर का नंबर सेव नहीं है!");
-            
-            // Format phone number (remove spaces/special chars)
             let phoneNum = cust.phone.replace(/\D/g, '');
-            // Automatically add 91 if it's a standard 10 digit Indian number
-            if(phoneNum.length === 10) {
-                phoneNum = '91' + phoneNum;
-            }
-
+            if(phoneNum.length === 10) phoneNum = '91' + phoneNum;
             let msg = encodeURIComponent(`नमस्कार ${cust.name} जी,\nआपकी पॉलिसी और लेजर का विवरण ऐप में अपडेट कर दिया गया है।`);
             window.open(`https://wa.me/${phoneNum}?text=${msg}`, '_blank');
         }
@@ -730,9 +749,7 @@
             let element = document.getElementById('pdfContentArea');
             let hideElements = document.querySelectorAll('.no-pdf');
             hideElements.forEach(el => el.style.display = 'none');
-            
             element.style.width = "800px"; 
-            
             let cust = appData.customers.find(c => c.id === activeCustomerId);
             let opt = {
                 margin:       0.3,
@@ -741,7 +758,6 @@
                 html2canvas:  { scale: 2, windowWidth: 800 },
                 jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
             };
-
             html2pdf().set(opt).from(element).save().then(() => {
                 hideElements.forEach(el => el.style.display = '');
                 element.style.width = "auto";
