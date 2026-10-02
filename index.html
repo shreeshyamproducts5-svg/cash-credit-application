@@ -10,8 +10,7 @@
     <style>
         .modal { display: none; }
         .modal.active { display: flex; }
-        /* Clean vertical scrollbar */
-        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     </style>
 </head>
@@ -27,7 +26,8 @@
             <input type="text" id="globalSearch" placeholder="Search Customer..." class="w-full px-3 py-1.5 sm:py-2 rounded text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm">
         </div>
         <div class="flex items-center gap-2">
-            <button class="bg-blue-800 px-2 py-1.5 sm:px-3 sm:py-1 rounded hover:bg-blue-900 text-xs sm:text-sm whitespace-nowrap"><i class="fab fa-google"></i> <span class="hidden sm:inline">Sync</span></button>
+            <!-- Back to Dashboard Home Button -->
+            <button onclick="showHome()" class="bg-blue-800 px-2 py-1.5 sm:px-3 sm:py-1 rounded hover:bg-blue-900 text-xs sm:text-sm whitespace-nowrap" title="Home / Dashboard"><i class="fas fa-home"></i></button>
         </div>
     </header>
 
@@ -44,14 +44,21 @@
         </aside>
 
         <!-- Main Content -->
-        <main id="mainContent" class="hidden md:flex flex-1 w-full bg-gray-50 flex-col relative h-full">
-            <div id="emptyState" class="hidden md:flex flex-1 items-center justify-center text-gray-400 flex-col">
-                <i class="fas fa-book text-6xl mb-4 text-gray-300"></i>
-                <h2 class="text-xl">Select a customer to view ledger</h2>
+        <main id="mainContent" class="flex-1 w-full bg-gray-50 flex-col relative h-full" style="display: none;">
+            
+            <!-- Dashboard View -->
+            <div id="dashboardView" class="flex-1 flex-col w-full bg-white overflow-y-auto" style="display: none;">
+                <div class="p-4 bg-blue-50 border-b">
+                    <h2 class="text-xl font-bold text-blue-800"><i class="fas fa-bell mr-2 text-red-500"></i>This Month's Dues (इस महीने की पॉलिसी)</h2>
+                    <p class="text-sm text-gray-600 mt-1">यहाँ पूरे ऐप के उन ग्राहकों की लिस्ट है जिनकी पॉलिसी इस महीने रिन्यू होनी है।</p>
+                </div>
+                <div class="p-2 sm:p-4" id="globalDuesList">
+                    <!-- Global Dues populated by JS -->
+                </div>
             </div>
 
-            <div id="ledgerView" class="hidden flex-1 flex-col overflow-hidden w-full">
-                <!-- Ledger Header -->
+            <!-- Ledger View -->
+            <div id="ledgerView" class="flex-1 flex-col overflow-hidden w-full" style="display: none;">
                 <div class="p-3 sm:p-4 bg-white border-b flex flex-col sm:flex-row justify-between items-start sm:items-center shadow-sm gap-3">
                     <div class="flex items-center gap-2 w-full sm:w-auto">
                         <button onclick="backToCustomers()" class="md:hidden text-blue-600 p-2 -ml-2 rounded-full hover:bg-blue-50"><i class="fas fa-arrow-left text-lg"></i></button>
@@ -74,13 +81,14 @@
                         </div>
 
                         <div class="flex gap-1">
+                            <!-- Due List Button -->
+                            <button onclick="openDuesSheet()" class="bg-yellow-500 text-white px-2 h-8 rounded hover:bg-yellow-600 flex items-center justify-center text-xs font-bold" title="Dues Sheet"><i class="fas fa-list-alt sm:mr-1"></i> <span class="hidden sm:inline">Sheet</span></button>
                             <button onclick="sendWhatsApp()" class="bg-green-500 text-white w-8 h-8 rounded hover:bg-green-600 flex items-center justify-center"><i class="fab fa-whatsapp"></i></button>
-                            <button onclick="exportPDF()" class="bg-red-500 text-white px-2 h-8 rounded hover:bg-red-600 flex items-center justify-center text-xs font-bold"><i class="fas fa-file-pdf mr-1"></i> PDF</button>
+                            <button onclick="exportPDF()" class="bg-red-500 text-white px-2 h-8 rounded hover:bg-red-600 flex items-center justify-center text-xs font-bold"><i class="fas fa-file-pdf sm:mr-1"></i> <span class="hidden sm:inline">PDF</span></button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Ledger Action Buttons -->
                 <div class="p-2 sm:p-3 bg-gray-100 border-b flex gap-2">
                     <button onclick="openGiveModal()" class="flex-1 bg-red-100 text-red-700 font-bold py-2 rounded border border-red-300 hover:bg-red-200 shadow-sm text-sm sm:text-base">GIVE (-)</button>
                     <button onclick="openModal('receiveModal')" class="flex-1 bg-green-100 text-green-700 font-bold py-2 rounded border border-green-300 hover:bg-green-200 shadow-sm text-sm sm:text-base">RECEIVE (+)</button>
@@ -91,19 +99,49 @@
                     <button onclick="deleteSelected()" class="bg-red-600 text-white px-3 py-1 rounded text-xs sm:text-sm hover:bg-red-700"><i class="fas fa-trash-alt mr-1"></i> Delete</button>
                 </div>
 
-                <!-- NO MORE HORIZONTAL SCROLL: Content fits exactly to screen width -->
                 <div class="flex-1 overflow-y-auto bg-gray-100 p-2 sm:p-4" id="pdfContentArea">
-                    <div class="bg-white rounded shadow-sm border border-gray-200 w-full max-w-4xl mx-auto" id="transactionsList">
-                        <!-- Transactions populated by JS -->
-                    </div>
+                    <div class="bg-white rounded shadow-sm border border-gray-200 w-full max-w-4xl mx-auto" id="transactionsList"></div>
                 </div>
             </div>
         </main>
     </div>
 
     <!-- MODALS -->
-    <!-- Add Customer -->
-    <div id="addCustomerModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50 p-2">
+    
+    <!-- Customer Dues Sheet Modal -->
+    <div id="custDuesModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50 p-2">
+        <div class="bg-white p-4 rounded shadow-lg w-[95%] max-w-3xl flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-list-alt text-yellow-600 mr-2"></i>Renewal Sheet - <span id="duesCustName"></span></h3>
+                <button onclick="closeModal('custDuesModal')" class="text-gray-500 hover:text-red-500 p-1"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            
+            <div class="overflow-auto flex-1 p-2 bg-white" id="duesPdfArea">
+                <h2 class="text-center font-bold text-xl mb-4 hidden" id="duesPdfTitle">Policy Renewal Sheet</h2>
+                <div class="min-w-[600px]">
+                    <table class="w-full text-left border-collapse border border-gray-300 text-sm">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="border border-gray-300 p-2 w-1/4">Due Date</th>
+                                <th class="border border-gray-300 p-2 w-1/4">Policy Number</th>
+                                <th class="border border-gray-300 p-2 w-1/4">Policy Holder</th>
+                                <th class="border border-gray-300 p-2 w-1/4">Mobile</th>
+                            </tr>
+                        </thead>
+                        <tbody id="duesTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="mt-4 flex justify-end gap-2 border-t pt-3">
+                <button onclick="closeModal('custDuesModal')" class="text-gray-500 px-4 py-2 hover:bg-gray-100 rounded">Close</button>
+                <button onclick="exportDuesPDF()" class="bg-red-500 text-white px-4 py-2 rounded shadow font-bold"><i class="fas fa-file-pdf mr-1"></i> Download Sheet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Customer (Added onkeypress for Enter Key) -->
+    <div id="addCustomerModal" onkeypress="handleEnter(event, saveCustomer)" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50 p-2">
         <div class="bg-white p-5 rounded shadow-lg w-[95%] max-w-sm">
             <h3 class="text-lg font-bold mb-4">Add New Customer</h3>
             <input type="text" id="custName" placeholder="Customer Name" class="w-full border p-2 mb-3 rounded">
@@ -115,8 +153,8 @@
         </div>
     </div>
 
-    <!-- Give Modal -->
-    <div id="giveModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50 p-2">
+    <!-- Give Modal (Added onkeypress for Enter Key) -->
+    <div id="giveModal" onkeypress="handleEnter(event, saveGive)" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50 p-2">
         <div class="bg-white p-4 sm:p-6 rounded shadow-lg w-[95%] max-w-2xl max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-base sm:text-lg font-bold text-red-600">Give (Payment Out)</h3>
@@ -132,7 +170,6 @@
                 <div class="w-full"><label class="text-xs text-gray-500">Remark / Notes</label><input type="text" id="gRemark" placeholder="Optional details..." class="w-full border p-2 rounded"></div>
             </div>
 
-            <!-- POLICY SPECIFIC FIELDS -->
             <div id="policyFieldsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 border-t pt-4 border-gray-200">
                 <div class="w-full"><label class="text-xs text-gray-500">Policy No</label><input type="text" id="gPolicyNo" placeholder="Policy Number" class="w-full border p-2 rounded"></div>
                 <div class="w-full"><label class="text-xs text-gray-500">Policy Holder</label><input type="text" id="gHolder" placeholder="Policy Holder Name" class="border w-full p-2 rounded"></div>
@@ -163,8 +200,8 @@
         </div>
     </div>
 
-    <!-- Receive Modal -->
-    <div id="receiveModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50 p-2">
+    <!-- Receive Modal (Added onkeypress for Enter Key) -->
+    <div id="receiveModal" onkeypress="handleEnter(event, saveReceive)" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50 p-2">
         <div class="bg-white p-5 rounded shadow-lg w-[95%] max-w-sm">
             <h3 class="text-lg font-bold mb-4 text-green-600">Receive Payment</h3>
             <input type="number" id="rAmount" placeholder="Amount (₹)" class="w-full border border-green-200 bg-green-50 p-2 mb-3 rounded text-xl font-bold">
@@ -205,38 +242,153 @@
         function saveData() { localStorage.setItem('samAppData', JSON.stringify(appData)); }
         const genId = () => Math.random().toString(36).substr(2, 9);
 
+        // --- ENTER KEY LOGIC ---
+        function handleEnter(e, saveAction) {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Stop default form submit behavior
+                saveAction();
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('gDate').valueAsDate = new Date();
             document.getElementById('rDate').valueAsDate = new Date();
             renderCustomers();
-            
-            if (window.innerWidth >= 768 && !activeCustomerId) {
-                document.getElementById('emptyState').classList.remove('hidden');
-                document.getElementById('emptyState').classList.add('flex');
-            }
+            showHome(); 
         });
 
         function openModal(id) { document.getElementById(id).classList.add('active'); }
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-        function backToCustomers() {
+        // --- FIXED DISPLAY LOGIC TO PREVENT UI OVERLAP ---
+        function showHome() {
             activeCustomerId = null;
-            document.getElementById('sidebar').classList.remove('hidden');
-            document.getElementById('mainContent').classList.add('hidden');
-            document.getElementById('mainContent').classList.remove('flex');
             renderCustomers(); 
+            
+            document.getElementById('mainContent').style.display = 'flex';
+            
+            if (window.innerWidth < 768) {
+                document.getElementById('sidebar').style.display = 'flex';
+                document.getElementById('mainContent').style.display = 'none';
+            } else {
+                document.getElementById('sidebar').style.display = 'flex';
+                document.getElementById('dashboardView').style.display = 'flex';
+                document.getElementById('ledgerView').style.display = 'none';
+            }
+            renderDashboard();
         }
 
-        function showLedgerView() {
+        function backToCustomers() {
+            showHome();
+        }
+
+        function showLedgerUI() {
+            document.getElementById('mainContent').style.display = 'flex';
+            
             if (window.innerWidth < 768) {
-                document.getElementById('sidebar').classList.add('hidden');
+                document.getElementById('sidebar').style.display = 'none';
             }
-            document.getElementById('mainContent').classList.remove('hidden');
-            document.getElementById('mainContent').classList.add('flex');
-            document.getElementById('emptyState').classList.add('hidden');
-            document.getElementById('emptyState').classList.remove('flex');
-            document.getElementById('ledgerView').classList.remove('hidden');
-            document.getElementById('ledgerView').classList.add('flex');
+            
+            document.getElementById('dashboardView').style.display = 'none';
+            document.getElementById('ledgerView').style.display = 'flex';
+        }
+
+        function renderDashboard() {
+            const list = document.getElementById('globalDuesList');
+            list.innerHTML = '';
+            
+            let currentMonth = new Date().getMonth();
+            let currentYear = new Date().getFullYear();
+            
+            let upcomingDues = [];
+            appData.transactions.forEach(tx => {
+                if(tx.type === 'GIVE' && tx.isPolicy && tx.nextDue) {
+                    let d = new Date(tx.nextDue);
+                    if(d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+                        let cust = appData.customers.find(c => c.id === tx.customerId);
+                        upcomingDues.push({
+                            ...tx,
+                            customerName: cust ? cust.name : 'Unknown'
+                        });
+                    }
+                }
+            });
+
+            upcomingDues.sort((a,b) => new Date(a.nextDue) - new Date(b.nextDue));
+
+            if(upcomingDues.length === 0) {
+                list.innerHTML = `<div class="p-8 text-center text-gray-500"><i class="fas fa-check-circle text-4xl text-green-300 mb-2"></i><br>इस महीने कोई भी पॉलिसी रिन्यूअल पेंडिंग नहीं है।</div>`;
+                return;
+            }
+
+            upcomingDues.forEach(due => {
+                let div = document.createElement('div');
+                div.className = "bg-white border rounded p-3 mb-2 shadow-sm border-l-4 border-red-500 cursor-pointer hover:bg-gray-50";
+                div.onclick = () => selectCustomer(due.customerId); 
+                div.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="font-bold text-gray-800">${due.customerName} <span class="text-xs font-normal text-gray-500 ml-1">(${due.holder || due.policyNo || 'Policy'})</span></div>
+                            <div class="text-sm text-gray-600 mt-1"><i class="fas fa-mobile-alt mr-1"></i> ${due.mobile || 'No Mobile Info'}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-red-600 font-bold text-sm"><i class="fas fa-clock"></i> ${new Date(due.nextDue).toLocaleDateString('en-IN')}</div>
+                            <button class="mt-2 text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded font-bold">Go to Ledger</button>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function openDuesSheet() {
+            if(!activeCustomerId) return;
+            let cust = appData.customers.find(c => c.id === activeCustomerId);
+            document.getElementById('duesCustName').innerText = cust.name;
+            
+            let tbody = document.getElementById('duesTableBody');
+            tbody.innerHTML = '';
+            
+            let custDues = appData.transactions.filter(t => t.customerId === activeCustomerId && t.type === 'GIVE' && t.isPolicy && t.nextDue);
+            
+            custDues.sort((a,b) => new Date(a.nextDue) - new Date(b.nextDue));
+            
+            if(custDues.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-500 border border-gray-300">No active policies found for this customer.</td></tr>`;
+            } else {
+                custDues.forEach(tx => {
+                    let tr = document.createElement('tr');
+                    tr.className = "hover:bg-gray-50";
+                    tr.innerHTML = `
+                        <td class="border border-gray-300 p-2 font-bold text-red-600">${new Date(tx.nextDue).toLocaleDateString('en-IN')}</td>
+                        <td class="border border-gray-300 p-2">${tx.policyNo || '-'}</td>
+                        <td class="border border-gray-300 p-2">${tx.holder || '-'}</td>
+                        <td class="border border-gray-300 p-2">${tx.mobile || '-'}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+            openModal('custDuesModal');
+        }
+
+        function exportDuesPDF() {
+            let element = document.getElementById('duesPdfArea');
+            let title = document.getElementById('duesPdfTitle');
+            let cust = appData.customers.find(c => c.id === activeCustomerId);
+            
+            title.classList.remove('hidden'); 
+            
+            let opt = {
+                margin:       0.5,
+                filename:     `Renewal_Sheet_${cust.name}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2 },
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                title.classList.add('hidden'); 
+            });
         }
 
         function openGiveModal() {
@@ -330,7 +482,7 @@
             document.getElementById('ledgerCustomerName').innerText = cust.name;
             document.getElementById('ledgerCustomerPhone').innerText = cust.phone;
             
-            showLedgerView();
+            showLedgerUI();
             renderTransactions();
         }
 
@@ -364,6 +516,7 @@
             closeModal('giveModal');
             document.getElementById('gAmount').value = ''; 
             renderTransactions();
+            renderDashboard(); 
         }
 
         function saveReceive() {
@@ -413,6 +566,7 @@
                 saveData();
                 updateActionBar();
                 renderTransactions();
+                renderDashboard();
             }
         }
 
@@ -465,13 +619,11 @@
             openModal('viewDetailsModal');
         }
 
-        // --- NEW UNIFIED COMPACT CARD LAYOUT ---
         function renderTransactions() {
             let searchTerm = document.getElementById('ledgerSearch').value.toLowerCase();
             let dateFilter = document.getElementById('ledgerDateFilter').value;
             let list = document.getElementById('transactionsList');
             
-            // Simplified Header that fits any screen
             list.innerHTML = `
                 <div class="flex justify-between items-center p-2 sm:p-3 bg-gray-800 text-white font-bold text-xs sm:text-sm border-b rounded-t">
                     <div class="flex items-center gap-2"><i class="fas fa-list"></i> Transactions</div>
@@ -537,7 +689,6 @@
                 let row = document.createElement('div');
                 row.className = "flex justify-between items-start border-b p-2 sm:p-3 hover:bg-blue-50 transition-colors w-full";
                 
-                // Card-style layout: Left side (Checkbox, Date, Details) | Right side (Amount, Balance, View btn)
                 row.innerHTML = `
                     <div class="flex gap-2 items-start flex-1 overflow-hidden pr-2">
                         <input type="checkbox" id="chk_${tx.id}" class="w-4 h-4 mt-0.5 flex-shrink-0 cursor-pointer no-pdf text-blue-600 rounded" ${isChecked} onchange="toggleSelection('${tx.id}')">
@@ -559,11 +710,20 @@
             });
         }
 
+        // --- WHATSAPP LOGIC ---
         function sendWhatsApp() {
             let cust = appData.customers.find(c => c.id === activeCustomerId);
-            if(!cust.phone) return alert("No phone number saved!");
+            if(!cust.phone) return alert("कस्टमर का नंबर सेव नहीं है!");
+            
+            // Format phone number (remove spaces/special chars)
+            let phoneNum = cust.phone.replace(/\D/g, '');
+            // Automatically add 91 if it's a standard 10 digit Indian number
+            if(phoneNum.length === 10) {
+                phoneNum = '91' + phoneNum;
+            }
+
             let msg = encodeURIComponent(`नमस्कार ${cust.name} जी,\nआपकी पॉलिसी और लेजर का विवरण ऐप में अपडेट कर दिया गया है।`);
-            window.open(`https://wa.me/91${cust.phone}?text=${msg}`, '_blank');
+            window.open(`https://wa.me/${phoneNum}?text=${msg}`, '_blank');
         }
 
         function exportPDF() {
@@ -571,7 +731,6 @@
             let hideElements = document.querySelectorAll('.no-pdf');
             hideElements.forEach(el => el.style.display = 'none');
             
-            // Adjust styles for better PDF output specifically
             element.style.width = "800px"; 
             
             let cust = appData.customers.find(c => c.id === activeCustomerId);
@@ -591,4 +750,3 @@
     </script>
 </body>
 </html>
-    
