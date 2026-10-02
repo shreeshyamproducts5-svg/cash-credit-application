@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SAM - Ledger & Policy Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        .modal { display: none; }
+        .modal.active { display: flex; }
+        /* Clean vertical scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans h-screen flex flex-col overflow-hidden text-sm sm:text-base">
+
+    <!-- Top Navbar -->
+    <header class="bg-blue-700 text-white p-2 sm:p-3 flex justify-between items-center shadow-md z-20 relative">
+        <div class="flex items-center gap-2 sm:gap-3">
+            <div class="bg-white text-blue-700 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-lg sm:text-xl">S</div>
+            <h1 class="text-xl sm:text-2xl font-bold hidden sm:block">SAM</h1>
+        </div>
+        <div class="flex-1 max-w-xl mx-2 sm:mx-4">
+            <input type="text" id="globalSearch" placeholder="Search Customer..." class="w-full px-3 py-1.5 sm:py-2 rounded text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm">
+        </div>
+        <div class="flex items-center gap-2">
+            <button class="bg-blue-800 px-2 py-1.5 sm:px-3 sm:py-1 rounded hover:bg-blue-900 text-xs sm:text-sm whitespace-nowrap"><i class="fab fa-google"></i> <span class="hidden sm:inline">Sync</span></button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="flex flex-1 overflow-hidden relative w-full">
+        
+        <!-- Sidebar -->
+        <aside id="sidebar" class="w-full md:w-1/3 lg:w-1/4 bg-white border-r flex flex-col h-full absolute md:relative z-10 transition-transform duration-300">
+            <div class="p-3 border-b flex justify-between items-center bg-gray-100">
+                <h2 class="font-bold text-gray-700">Customers</h2>
+                <button onclick="openModal('addCustomerModal')" class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 shadow-sm"><i class="fas fa-plus mr-1"></i> Add</button>
+            </div>
+            <div id="customerList" class="flex-1 overflow-y-auto p-2 pb-20 md:pb-2"></div>
+        </aside>
+
+        <!-- Main Content -->
+        <main id="mainContent" class="hidden md:flex flex-1 w-full bg-gray-50 flex-col relative h-full">
+            <div id="emptyState" class="hidden md:flex flex-1 items-center justify-center text-gray-400 flex-col">
+                <i class="fas fa-book text-6xl mb-4 text-gray-300"></i>
+                <h2 class="text-xl">Select a customer to view ledger</h2>
+            </div>
+
+            <div id="ledgerView" class="hidden flex-1 flex-col overflow-hidden w-full">
+                <!-- Ledger Header -->
+                <div class="p-3 sm:p-4 bg-white border-b flex flex-col sm:flex-row justify-between items-start sm:items-center shadow-sm gap-3">
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <button onclick="backToCustomers()" class="md:hidden text-blue-600 p-2 -ml-2 rounded-full hover:bg-blue-50"><i class="fas fa-arrow-left text-lg"></i></button>
+                        <div>
+                            <h2 id="ledgerCustomerName" class="text-xl sm:text-2xl font-bold text-gray-800">Customer Name</h2>
+                            <p id="ledgerCustomerPhone" class="text-gray-500 text-xs sm:text-sm"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex w-full sm:w-auto flex-wrap gap-2 justify-between sm:justify-end">
+                        <div class="flex items-center border rounded bg-white px-2 py-1 flex-1 sm:flex-none min-w-[120px]">
+                            <i class="fas fa-filter text-gray-400 mr-1 text-xs"></i>
+                            <input type="date" id="ledgerDateFilter" onchange="renderTransactions()" class="w-full text-xs sm:text-sm focus:outline-none bg-transparent" title="Filter by Date">
+                            <button onclick="clearDateFilter()" class="text-red-400 hover:text-red-600 ml-1"><i class="fas fa-times"></i></button>
+                        </div>
+                        
+                        <div class="relative flex-1 sm:flex-none min-w-[140px]">
+                            <i class="fas fa-search absolute left-2.5 top-2 text-gray-400 text-xs"></i>
+                            <input type="text" id="ledgerSearch" oninput="renderTransactions()" placeholder="Search..." class="w-full pl-7 pr-3 py-1.5 border rounded focus:outline-none focus:border-blue-500 text-xs sm:text-sm">
+                        </div>
+
+                        <div class="flex gap-1">
+                            <button onclick="sendWhatsApp()" class="bg-green-500 text-white w-8 h-8 rounded hover:bg-green-600 flex items-center justify-center"><i class="fab fa-whatsapp"></i></button>
+                            <button onclick="exportPDF()" class="bg-red-500 text-white px-2 h-8 rounded hover:bg-red-600 flex items-center justify-center text-xs font-bold"><i class="fas fa-file-pdf mr-1"></i> PDF</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ledger Action Buttons -->
+                <div class="p-2 sm:p-3 bg-gray-100 border-b flex gap-2">
+                    <button onclick="openGiveModal()" class="flex-1 bg-red-100 text-red-700 font-bold py-2 rounded border border-red-300 hover:bg-red-200 shadow-sm text-sm sm:text-base">GIVE (-)</button>
+                    <button onclick="openModal('receiveModal')" class="flex-1 bg-green-100 text-green-700 font-bold py-2 rounded border border-green-300 hover:bg-green-200 shadow-sm text-sm sm:text-base">RECEIVE (+)</button>
+                </div>
+                
+                <div id="bulkActionBar" class="hidden bg-red-50 p-2 border-b border-red-200 flex justify-between items-center">
+                    <div class="text-red-700 font-bold text-xs sm:text-sm"><span id="selectedCount">0</span> selected</div>
+                    <button onclick="deleteSelected()" class="bg-red-600 text-white px-3 py-1 rounded text-xs sm:text-sm hover:bg-red-700"><i class="fas fa-trash-alt mr-1"></i> Delete</button>
+                </div>
+
+                <!-- NO MORE HORIZONTAL SCROLL: Content fits exactly to screen width -->
+                <div class="flex-1 overflow-y-auto bg-gray-100 p-2 sm:p-4" id="pdfContentArea">
+                    <div class="bg-white rounded shadow-sm border border-gray-200 w-full max-w-4xl mx-auto" id="transactionsList">
+                        <!-- Transactions populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODALS -->
+    <!-- Add Customer -->
+    <div id="addCustomerModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50 p-2">
+        <div class="bg-white p-5 rounded shadow-lg w-[95%] max-w-sm">
+            <h3 class="text-lg font-bold mb-4">Add New Customer</h3>
+            <input type="text" id="custName" placeholder="Customer Name" class="w-full border p-2 mb-3 rounded">
+            <input type="tel" id="custPhone" placeholder="WhatsApp Number" class="w-full border p-2 mb-4 rounded">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal('addCustomerModal')" class="px-4 py-2 text-gray-500">Cancel</button>
+                <button onclick="saveCustomer()" class="bg-blue-600 text-white px-4 py-2 rounded">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Give Modal -->
+    <div id="giveModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50 p-2">
+        <div class="bg-white p-4 sm:p-6 rounded shadow-lg w-[95%] max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-base sm:text-lg font-bold text-red-600">Give (Payment Out)</h3>
+                <label class="flex items-center cursor-pointer bg-gray-100 px-2 sm:px-3 py-1 rounded border">
+                    <input type="checkbox" id="isPolicyToggle" class="mr-2 w-4 h-4" checked onchange="togglePolicyFields()">
+                    <span class="text-xs sm:text-sm font-bold text-gray-700">Policy Details</span>
+                </label>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                <input type="number" id="gAmount" placeholder="Amount (₹)" class="border p-2 rounded sm:col-span-2 text-lg sm:text-xl font-bold bg-red-50 border-red-200 w-full">
+                <div class="w-full"><label class="text-xs text-gray-500">Payment Date</label><input type="date" id="gDate" onchange="calculateNextDue()" class="w-full border p-2 rounded"></div>
+                <div class="w-full"><label class="text-xs text-gray-500">Remark / Notes</label><input type="text" id="gRemark" placeholder="Optional details..." class="w-full border p-2 rounded"></div>
+            </div>
+
+            <!-- POLICY SPECIFIC FIELDS -->
+            <div id="policyFieldsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 border-t pt-4 border-gray-200">
+                <div class="w-full"><label class="text-xs text-gray-500">Policy No</label><input type="text" id="gPolicyNo" placeholder="Policy Number" class="w-full border p-2 rounded"></div>
+                <div class="w-full"><label class="text-xs text-gray-500">Policy Holder</label><input type="text" id="gHolder" placeholder="Policy Holder Name" class="border w-full p-2 rounded"></div>
+                <div class="w-full"><label class="text-xs text-gray-500">DOB</label><input type="text" id="gDob" placeholder="e.g., DD/MM/YYYY" class="w-full border p-2 rounded"></div>
+                <div class="w-full"><label class="text-xs text-gray-500">Mobile</label><input type="text" id="gMobile" placeholder="Registered Mobile" class="w-full border p-2 rounded"></div>
+                <div class="w-full"><label class="text-xs text-gray-500">Email ID</label><input type="email" id="gEmail" placeholder="Email ID" class="w-full border p-2 rounded"></div>
+                <div class="w-full"><label class="text-xs text-gray-500">Portal Password</label><input type="text" id="gPass" placeholder="Portal Password" class="w-full border p-2 rounded"></div>
+                <div class="w-full">
+                    <label class="text-xs text-gray-500">Renewal Frequency</label>
+                    <select id="gFreq" onchange="calculateNextDue()" class="w-full border p-2 rounded bg-white">
+                        <option value="">Select Frequency</option>
+                        <option value="Monthly">Monthly</option>
+                        <option value="Quarterly">Quarterly</option>
+                        <option value="Half-Yearly">Half-Yearly</option>
+                        <option value="Yearly">Yearly</option>
+                    </select>
+                </div>
+                <div class="w-full">
+                    <label class="text-xs text-gray-500">Auto Next Due Date</label>
+                    <input type="date" id="gNextDue" class="w-full border p-2 rounded bg-gray-100">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 border-t pt-3 sm:pt-4">
+                <button onclick="closeModal('giveModal')" class="px-4 py-2 text-gray-500">Cancel</button>
+                <button onclick="saveGive()" class="bg-red-600 text-white px-4 sm:px-6 py-2 rounded font-bold shadow w-full sm:w-auto">Save Entry</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receive Modal -->
+    <div id="receiveModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50 p-2">
+        <div class="bg-white p-5 rounded shadow-lg w-[95%] max-w-sm">
+            <h3 class="text-lg font-bold mb-4 text-green-600">Receive Payment</h3>
+            <input type="number" id="rAmount" placeholder="Amount (₹)" class="w-full border border-green-200 bg-green-50 p-2 mb-3 rounded text-xl font-bold">
+            <label class="text-xs text-gray-500 block mb-1">Receive Date</label>
+            <input type="date" id="rDate" class="w-full border p-2 mb-3 rounded w-full">
+            <select id="rMode" class="w-full border p-2 mb-3 rounded bg-white">
+                <option value="Online">Online (UPI/NetBanking)</option>
+                <option value="Cash">Cash</option>
+                <option value="Other">Other Person</option>
+            </select>
+            <input type="text" id="rRemark" placeholder="Remark / Details" class="w-full border p-2 mb-4 rounded">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal('receiveModal')" class="px-4 py-2 text-gray-500">Cancel</button>
+                <button onclick="saveReceive()" class="bg-green-600 text-white px-4 py-2 rounded font-bold shadow w-full sm:w-auto">Save Entry</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Details Modal -->
+    <div id="viewDetailsModal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50 p-2">
+        <div class="bg-white p-5 rounded shadow-lg w-[95%] max-w-md max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-file-invoice text-blue-600 mr-2"></i>Details</h3>
+                <button onclick="closeModal('viewDetailsModal')" class="text-gray-500 hover:text-red-500 p-1"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div id="viewDetailsContent" class="space-y-3 text-sm text-gray-700"></div>
+            <div class="mt-6 flex justify-end">
+                <button onclick="closeModal('viewDetailsModal')" class="bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700 w-full sm:w-auto">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let appData = JSON.parse(localStorage.getItem('samAppData')) || { customers: [], transactions: [] };
+        let activeCustomerId = null;
+        let selectedTransactions = new Set(); 
+
+        function saveData() { localStorage.setItem('samAppData', JSON.stringify(appData)); }
+        const genId = () => Math.random().toString(36).substr(2, 9);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('gDate').valueAsDate = new Date();
+            document.getElementById('rDate').valueAsDate = new Date();
+            renderCustomers();
+            
+            if (window.innerWidth >= 768 && !activeCustomerId) {
+                document.getElementById('emptyState').classList.remove('hidden');
+                document.getElementById('emptyState').classList.add('flex');
+            }
+        });
+
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        function backToCustomers() {
+            activeCustomerId = null;
+            document.getElementById('sidebar').classList.remove('hidden');
+            document.getElementById('mainContent').classList.add('hidden');
+            document.getElementById('mainContent').classList.remove('flex');
+            renderCustomers(); 
+        }
+
+        function showLedgerView() {
+            if (window.innerWidth < 768) {
+                document.getElementById('sidebar').classList.add('hidden');
+            }
+            document.getElementById('mainContent').classList.remove('hidden');
+            document.getElementById('mainContent').classList.add('flex');
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('emptyState').classList.remove('flex');
+            document.getElementById('ledgerView').classList.remove('hidden');
+            document.getElementById('ledgerView').classList.add('flex');
+        }
+
+        function openGiveModal() {
+            document.getElementById('gDate').valueAsDate = new Date();
+            openModal('giveModal');
+            togglePolicyFields(); 
+        }
+
+        function togglePolicyFields() {
+            const isPolicy = document.getElementById('isPolicyToggle').checked;
+            const container = document.getElementById('policyFieldsContainer');
+            if (isPolicy) {
+                container.style.display = 'grid';
+            } else {
+                container.style.display = 'none';
+                document.getElementById('gPolicyNo').value = '';
+                document.getElementById('gHolder').value = '';
+                document.getElementById('gDob').value = '';
+                document.getElementById('gMobile').value = '';
+                document.getElementById('gEmail').value = '';
+                document.getElementById('gPass').value = '';
+                document.getElementById('gFreq').value = '';
+                document.getElementById('gNextDue').value = '';
+            }
+        }
+
+        function clearDateFilter() {
+            document.getElementById('ledgerDateFilter').value = '';
+            renderTransactions();
+        }
+
+        document.getElementById('globalSearch').addEventListener('input', function(e) {
+            let term = e.target.value.toLowerCase();
+            let nodes = document.getElementById('customerList').children;
+            for(let node of nodes) {
+                let name = node.innerText.toLowerCase();
+                node.style.display = name.includes(term) ? '' : 'none';
+            }
+        });
+
+        function calculateNextDue() {
+            let dateVal = document.getElementById('gDate').value;
+            let freq = document.getElementById('gFreq').value;
+            if(!dateVal || !freq) return;
+            
+            let d = new Date(dateVal);
+            if(freq === 'Monthly') d.setMonth(d.getMonth() + 1);
+            else if(freq === 'Quarterly') d.setMonth(d.getMonth() + 3);
+            else if(freq === 'Half-Yearly') d.setMonth(d.getMonth() + 6);
+            else if(freq === 'Yearly') d.setFullYear(d.getFullYear() + 1);
+            
+            document.getElementById('gNextDue').valueAsDate = d;
+        }
+
+        function saveCustomer() {
+            let name = document.getElementById('custName').value.trim();
+            let phone = document.getElementById('custPhone').value.trim();
+            if(!name) return alert("Name is required");
+            let newCust = { id: genId(), name, phone };
+            appData.customers.push(newCust);
+            saveData();
+            closeModal('addCustomerModal');
+            document.getElementById('custName').value = '';
+            document.getElementById('custPhone').value = '';
+            renderCustomers();
+            selectCustomer(newCust.id);
+        }
+
+        function renderCustomers() {
+            const list = document.getElementById('customerList');
+            list.innerHTML = '';
+            appData.customers.forEach(c => {
+                let div = document.createElement('div');
+                div.className = `p-3 sm:p-4 border-b cursor-pointer hover:bg-blue-50 transition-colors ${activeCustomerId === c.id ? 'bg-blue-100 border-l-4 border-blue-600' : ''}`;
+                div.innerHTML = `<div class="font-bold text-gray-800 text-sm sm:text-base">${c.name}</div><div class="text-xs text-gray-500">${c.phone}</div>`;
+                div.onclick = () => selectCustomer(c.id);
+                list.appendChild(div);
+            });
+        }
+
+        function selectCustomer(id) {
+            activeCustomerId = id;
+            document.getElementById('ledgerSearch').value = ''; 
+            document.getElementById('ledgerDateFilter').value = ''; 
+            selectedTransactions.clear(); 
+            updateActionBar();
+            
+            renderCustomers();
+            
+            let cust = appData.customers.find(c => c.id === id);
+            document.getElementById('ledgerCustomerName').innerText = cust.name;
+            document.getElementById('ledgerCustomerPhone').innerText = cust.phone;
+            
+            showLedgerView();
+            renderTransactions();
+        }
+
+        function saveGive() {
+            let amt = parseFloat(document.getElementById('gAmount').value);
+            if(!amt || !activeCustomerId) return;
+            
+            let isPolicy = document.getElementById('isPolicyToggle').checked;
+            
+            let tx = {
+                id: genId(), customerId: activeCustomerId, type: 'GIVE', amount: amt,
+                date: document.getElementById('gDate').value,
+                remark: document.getElementById('gRemark').value,
+                isPolicy: isPolicy, 
+                timestamp: new Date().getTime()
+            };
+
+            if(isPolicy) {
+                tx.policyNo = document.getElementById('gPolicyNo').value;
+                tx.holder = document.getElementById('gHolder').value;
+                tx.dob = document.getElementById('gDob').value;
+                tx.mobile = document.getElementById('gMobile').value;
+                tx.email = document.getElementById('gEmail').value;
+                tx.pass = document.getElementById('gPass').value;
+                tx.freq = document.getElementById('gFreq').value;
+                tx.nextDue = document.getElementById('gNextDue').value;
+            }
+
+            appData.transactions.push(tx);
+            saveData();
+            closeModal('giveModal');
+            document.getElementById('gAmount').value = ''; 
+            renderTransactions();
+        }
+
+        function saveReceive() {
+            let amt = parseFloat(document.getElementById('rAmount').value);
+            if(!amt || !activeCustomerId) return;
+            let tx = {
+                id: genId(), customerId: activeCustomerId, type: 'RECEIVE', amount: amt,
+                date: document.getElementById('rDate').value,
+                mode: document.getElementById('rMode').value,
+                remark: document.getElementById('rRemark').value,
+                timestamp: new Date().getTime()
+            };
+            appData.transactions.push(tx);
+            saveData();
+            closeModal('receiveModal');
+            document.getElementById('rAmount').value = ''; 
+            renderTransactions();
+        }
+
+        function toggleSelection(txId) {
+            let checkbox = document.getElementById(`chk_${txId}`);
+            if(checkbox.checked) {
+                selectedTransactions.add(txId);
+            } else {
+                selectedTransactions.delete(txId);
+            }
+            updateActionBar();
+        }
+
+        function updateActionBar() {
+            const bar = document.getElementById('bulkActionBar');
+            const countSpan = document.getElementById('selectedCount');
+            if(selectedTransactions.size > 0) {
+                bar.classList.remove('hidden');
+                bar.classList.add('flex');
+                countSpan.innerText = selectedTransactions.size;
+            } else {
+                bar.classList.add('hidden');
+                bar.classList.remove('flex');
+            }
+        }
+
+        function deleteSelected() {
+            if(confirm(`Delete ${selectedTransactions.size} selected entries?`)) {
+                appData.transactions = appData.transactions.filter(t => !selectedTransactions.has(t.id));
+                selectedTransactions.clear();
+                saveData();
+                updateActionBar();
+                renderTransactions();
+            }
+        }
+
+        function openViewDetails(txId) {
+            let tx = appData.transactions.find(t => t.id === txId);
+            if(!tx) return;
+            
+            let content = document.getElementById('viewDetailsContent');
+            let dateStr = new Date(tx.date).toLocaleDateString('en-IN');
+            
+            if(tx.type === 'GIVE') {
+                if(tx.isPolicy) {
+                    let dueStr = tx.nextDue ? new Date(tx.nextDue).toLocaleDateString('en-IN') : 'N/A';
+                    content.innerHTML = `
+                        <div class="grid grid-cols-2 gap-y-3">
+                            <div class="text-gray-500">Amount Paid:</div><div class="font-bold text-red-600">₹${tx.amount}</div>
+                            <div class="text-gray-500">Date:</div><div class="font-bold">${dateStr}</div>
+                            <div class="col-span-2 border-t my-1"></div>
+                            <div class="text-gray-500">Policy Number:</div><div class="font-bold">${tx.policyNo || '-'}</div>
+                            <div class="text-gray-500">Policy Holder:</div><div class="font-bold break-words">${tx.holder || '-'}</div>
+                            <div class="text-gray-500">Date of Birth:</div><div class="font-bold">${tx.dob || '-'}</div>
+                            <div class="text-gray-500">Mobile Number:</div><div class="font-bold text-blue-600">${tx.mobile || '-'}</div>
+                            <div class="text-gray-500">Email ID:</div><div class="font-bold break-all">${tx.email || '-'}</div>
+                            <div class="text-gray-500">Portal Password:</div><div class="font-bold bg-gray-100 px-2 py-1 rounded inline-block tracking-wider break-all">${tx.pass || '-'}</div>
+                            <div class="col-span-2 border-t my-1"></div>
+                            <div class="text-gray-500">Frequency:</div><div class="font-bold">${tx.freq || '-'}</div>
+                            <div class="text-gray-500">Next Due Date:</div><div class="font-bold text-red-500">${dueStr}</div>
+                            <div class="text-gray-500">Remark:</div><div class="font-bold break-words">${tx.remark || '-'}</div>
+                        </div>
+                    `;
+                } else {
+                    content.innerHTML = `
+                        <div class="grid grid-cols-2 gap-y-3">
+                            <div class="text-gray-500">Amount Paid (Debit):</div><div class="font-bold text-red-600">₹${tx.amount}</div>
+                            <div class="text-gray-500">Date:</div><div class="font-bold">${dateStr}</div>
+                            <div class="text-gray-500">Remark/Details:</div><div class="font-bold break-words">${tx.remark || '-'}</div>
+                        </div>
+                    `;
+                }
+            } else {
+                content.innerHTML = `
+                    <div class="grid grid-cols-2 gap-y-3">
+                        <div class="text-gray-500">Amount Received:</div><div class="font-bold text-green-600">₹${tx.amount}</div>
+                        <div class="text-gray-500">Date:</div><div class="font-bold">${dateStr}</div>
+                        <div class="text-gray-500">Payment Mode:</div><div class="font-bold">${tx.mode || 'Cash'}</div>
+                        <div class="text-gray-500">Remark:</div><div class="font-bold break-words">${tx.remark || '-'}</div>
+                    </div>
+                `;
+            }
+            openModal('viewDetailsModal');
+        }
+
+        // --- NEW UNIFIED COMPACT CARD LAYOUT ---
+        function renderTransactions() {
+            let searchTerm = document.getElementById('ledgerSearch').value.toLowerCase();
+            let dateFilter = document.getElementById('ledgerDateFilter').value;
+            let list = document.getElementById('transactionsList');
+            
+            // Simplified Header that fits any screen
+            list.innerHTML = `
+                <div class="flex justify-between items-center p-2 sm:p-3 bg-gray-800 text-white font-bold text-xs sm:text-sm border-b rounded-t">
+                    <div class="flex items-center gap-2"><i class="fas fa-list"></i> Transactions</div>
+                    <div class="text-right mr-1">Amount & Balance</div>
+                </div>
+            `;
+            
+            let custTxs = appData.transactions.filter(t => t.customerId === activeCustomerId);
+            custTxs.sort((a,b) => new Date(a.date) - new Date(b.date) || a.timestamp - b.timestamp);
+            
+            let currentBalance = 0;
+            custTxs.forEach(tx => {
+                if(tx.type === 'GIVE') currentBalance -= tx.amount;
+                if(tx.type === 'RECEIVE') currentBalance += tx.amount;
+                tx.runBal = currentBalance;
+            });
+            
+            if(dateFilter) { custTxs = custTxs.filter(tx => tx.date === dateFilter); }
+
+            if(searchTerm) {
+                custTxs = custTxs.filter(tx => 
+                    (tx.policyNo && tx.policyNo.toLowerCase().includes(searchTerm)) ||
+                    (tx.mobile && tx.mobile.toLowerCase().includes(searchTerm)) ||
+                    (tx.email && tx.email.toLowerCase().includes(searchTerm)) ||
+                    (tx.holder && tx.holder.toLowerCase().includes(searchTerm)) ||
+                    (tx.remark && tx.remark.toLowerCase().includes(searchTerm)) ||
+                    (tx.dob && tx.dob.toLowerCase().includes(searchTerm))
+                );
+            }
+            
+            if(custTxs.length === 0) {
+                list.innerHTML += `<div class="p-5 text-center text-gray-500 text-sm">No records found.</div>`;
+            }
+
+            custTxs.forEach(tx => {
+                let detailsHTML = '';
+                
+                if(tx.type === 'GIVE') {
+                    if(tx.isPolicy) {
+                        detailsHTML = `
+                            <div class="font-bold text-gray-800 cursor-pointer" onclick="openViewDetails('${tx.id}')">
+                                ${tx.policyNo || 'Policy'} ${tx.holder ? ' ('+tx.holder+')' : ''} 
+                            </div>
+                            <div class="text-xs text-gray-600 mt-0.5 break-words line-clamp-2">${tx.remark || ''}</div>
+                            ${tx.nextDue ? `<div class="text-xs text-red-500 font-bold mt-1"><i class="fas fa-bell"></i> Due: ${new Date(tx.nextDue).toLocaleDateString('en-IN')}</div>` : ''}
+                        `;
+                    } else {
+                        detailsHTML = `
+                            <div class="font-bold text-gray-800 cursor-pointer" onclick="openViewDetails('${tx.id}')">Payment Out (Debit)</div>
+                            <div class="text-xs text-gray-600 mt-0.5 break-words">${tx.remark || ''}</div>
+                        `;
+                    }
+                } else {
+                    detailsHTML = `
+                        <div class="font-bold text-gray-800 cursor-pointer" onclick="openViewDetails('${tx.id}')">Payment In (${tx.mode || 'Cash'})</div>
+                        <div class="text-xs text-gray-600 mt-0.5 break-words">${tx.remark || ''}</div>
+                    `;
+                }
+                
+                let balText = tx.runBal < 0 ? `Bal: ₹${Math.abs(tx.runBal)} <span class="text-red-500">Due</span>` : `Bal: ₹${tx.runBal} <span class="text-green-500">Adv</span>`;
+                let isChecked = selectedTransactions.has(tx.id) ? 'checked' : '';
+
+                let row = document.createElement('div');
+                row.className = "flex justify-between items-start border-b p-2 sm:p-3 hover:bg-blue-50 transition-colors w-full";
+                
+                // Card-style layout: Left side (Checkbox, Date, Details) | Right side (Amount, Balance, View btn)
+                row.innerHTML = `
+                    <div class="flex gap-2 items-start flex-1 overflow-hidden pr-2">
+                        <input type="checkbox" id="chk_${tx.id}" class="w-4 h-4 mt-0.5 flex-shrink-0 cursor-pointer no-pdf text-blue-600 rounded" ${isChecked} onchange="toggleSelection('${tx.id}')">
+                        <div class="flex flex-col w-full">
+                            <div class="text-xs text-gray-500 font-bold mb-1">${new Date(tx.date).toLocaleDateString('en-IN')}</div>
+                            <div class="leading-tight text-sm">${detailsHTML}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col items-end flex-shrink-0 min-w-[90px]">
+                        <div class="font-bold text-sm ${tx.type === 'GIVE' ? 'text-red-600' : 'text-green-600'}">
+                            ${tx.type === 'GIVE' ? '- ₹' + tx.amount : '+ ₹' + tx.amount}
+                        </div>
+                        <div class="text-xs font-bold text-gray-600 mt-1 bg-gray-100 px-1.5 py-0.5 rounded">${balText}</div>
+                        <button onclick="openViewDetails('${tx.id}')" class="mt-2 text-blue-600 bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded text-xs no-pdf font-bold"><i class="fas fa-eye mr-1"></i>View</button>
+                    </div>
+                `;
+                list.appendChild(row);
+            });
+        }
+
+        function sendWhatsApp() {
+            let cust = appData.customers.find(c => c.id === activeCustomerId);
+            if(!cust.phone) return alert("No phone number saved!");
+            let msg = encodeURIComponent(`नमस्कार ${cust.name} जी,\nआपकी पॉलिसी और लेजर का विवरण ऐप में अपडेट कर दिया गया है।`);
+            window.open(`https://wa.me/91${cust.phone}?text=${msg}`, '_blank');
+        }
+
+        function exportPDF() {
+            let element = document.getElementById('pdfContentArea');
+            let hideElements = document.querySelectorAll('.no-pdf');
+            hideElements.forEach(el => el.style.display = 'none');
+            
+            // Adjust styles for better PDF output specifically
+            element.style.width = "800px"; 
+            
+            let cust = appData.customers.find(c => c.id === activeCustomerId);
+            let opt = {
+                margin:       0.3,
+                filename:     `Ledger_${cust.name}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, windowWidth: 800 },
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                hideElements.forEach(el => el.style.display = '');
+                element.style.width = "auto";
+            });
+        }
+    </script>
+</body>
+</html>
+    
